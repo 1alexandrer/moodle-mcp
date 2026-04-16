@@ -2,20 +2,29 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { MoodleClient } from "../moodle-client.js";
 
-interface ContentFile {
+interface ModuleContent {
+  type: string;
   filename: string;
   fileurl: string;
   filesize: number;
   mimetype?: string;
-  timemodified: number;
 }
 
-interface Resource {
+interface CourseModule {
   id: number;
   name: string;
-  coursemodule: number;
-  contentfiles: ContentFile[];
+  modname: string;
+  url?: string;
+  contents?: ModuleContent[];
 }
+
+interface CourseSection {
+  id: number;
+  name: string;
+  modules: CourseModule[];
+}
+
+const FILE_MODS = new Set(["resource", "url", "folder"]);
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -24,27 +33,50 @@ function formatSize(bytes: number): string {
 }
 
 export async function listResources(client: MoodleClient, courseId: number): Promise<string> {
-  const resources = await client.call<Resource[]>("mod_resource_get_resources_by_courses", {
-    "courseids[0]": courseId,
+  const sections = await client.call<CourseSection[]>("core_course_get_contents", {
+    courseid: courseId,
   });
-  if (resources.length === 0) return "No downloadable files found in this course.";
 
-  const lines: string[] = [`## Files in Course ${courseId}\n`];
-  for (const r of resources) {
-    lines.push(`**${r.name}**`);
-    for (const f of r.contentfiles) {
-      const url = client.fileUrl(f.fileurl);
-      const size = formatSize(f.filesize);
-      lines.push(`  - [${f.filename}](${url}) *(${size})*`);
+  const lines: string[] = [`## Files — Course ${courseId}\n`];
+  let hasFiles = false;
+
+  for (const section of sections) {
+    const fileMods = section.modules.filter((m) => FILE_MODS.has(m.modname));
+    if (fileMods.length === 0) continue;
+
+    lines.push(`### ${section.name || "General"}`);
+    hasFiles = true;
+
+    for (const mod of fileMods) {
+      if (mod.modname === "url") {
+        lines.push(`- 🔗 [${mod.name}](${mod.url ?? ""})`);
+        continue;
+      }
+      if (!mod.contents || mod.contents.length === 0) {
+        lines.push(`- 📁 **${mod.name}** *(empty)*`);
+        continue;
+      }
+      for (const file of mod.contents) {
+        if (file.type === "url") {
+          lines.push(`- 🔗 [${file.filename}](${file.fileurl})`);
+        } else {
+          const url = client.fileUrl(file.fileurl);
+          const size = formatSize(file.filesize);
+          lines.push(`- 📄 [${file.filename}](${url}) *(${size})*`);
+        }
+      }
     }
+    lines.push("");
   }
+
+  if (!hasFiles) return "No downloadable files found in this course.";
   return lines.join("\n");
 }
 
 export function registerFileTools(server: McpServer, client: MoodleClient): void {
   server.tool(
     "moodle_list_resources",
-    "List downloadable files and resources in a course. Returns authenticated download URLs.",
+    "List all downloadable files and links in a course, grouped by the course's own sections (weeks, chapters, topics — as defined by the professor). Returns authenticated download URLs.",
     { courseId: z.number().describe("Course ID from moodle_list_courses") },
     async ({ courseId }) => ({
       content: [{ type: "text" as const, text: await listResources(client, courseId) }],
