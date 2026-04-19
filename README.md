@@ -6,21 +6,43 @@
 
 ---
 
-## Quick Start
+## Install
 
-**1. Get your token** → [see below](#getting-your-token)
+### Step 1 — Get your Moodle token
 
-> **Tip:** Run `npx moodle-mcp` in your terminal at any time to see setup instructions printed for your platform.
+See [Getting Your Token](#getting-your-token) below. You'll need this for any install method.
 
-**2. Add to your MCP client**
+### Step 2 — Pick your delivery mode
 
-**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+**Option A — Local (zero hosting):** Runs `npx moodle-mcp` on your machine each time your MCP client starts. No server, no cost, nothing to deploy.
+
+**Option B — Hosted (Cloudflare Worker):** Deploy once, get a permanent URL. Your MCP client connects to the URL — no `npx` on the client side.
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/1alexandrer/moodle-mcp)
+
+After deploying, set `MOODLE_URL` and `MOODLE_TOKEN` as [secrets in the CF dashboard](https://dash.cloudflare.com/) or via:
+```bash
+wrangler secret put MOODLE_URL
+wrangler secret put MOODLE_TOKEN
+```
+Your URL will be `https://moodle-mcp.<your-subdomain>.workers.dev`.
+
+### Step 3 — Configure your MCP client
+
+<details>
+<summary><strong>Claude Desktop</strong></summary>
+
+Config file:
+- Mac: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Option A — Local:**
 ```json
 {
   "mcpServers": {
     "moodle": {
       "command": "npx",
-      "args": ["moodle-mcp"],
+      "args": ["-y", "moodle-mcp"],
       "env": {
         "MOODLE_URL": "https://moodle.yourschool.edu",
         "MOODLE_TOKEN": "your_token_here"
@@ -30,13 +52,46 @@
 }
 ```
 
-**VS Code** (add to `.vscode/mcp.json`):
+**Option B — Hosted:**
 ```json
 {
-  "servers": {
+  "mcpServers": {
+    "moodle": {
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Claude Code (CLI)</strong></summary>
+
+**Option A — Local:**
+```bash
+claude mcp add moodle npx -- -y moodle-mcp \
+  -e MOODLE_URL=https://moodle.yourschool.edu \
+  -e MOODLE_TOKEN=your_token_here
+```
+
+**Option B — Hosted:**
+```bash
+claude mcp add moodle --transport http https://moodle-mcp.your-subdomain.workers.dev
+```
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Config file: `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project)
+
+**Option A — Local:**
+```json
+{
+  "mcpServers": {
     "moodle": {
       "command": "npx",
-      "args": ["moodle-mcp"],
+      "args": ["-y", "moodle-mcp"],
       "env": {
         "MOODLE_URL": "https://moodle.yourschool.edu",
         "MOODLE_TOKEN": "your_token_here"
@@ -45,6 +100,189 @@
   }
 }
 ```
+
+**Option B — Hosted:**
+```json
+{
+  "mcpServers": {
+    "moodle": {
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>VS Code</strong></summary>
+
+Config file: `.vscode/mcp.json` in your project, or `settings.json` globally.
+
+**Option A — Local:**
+```json
+{
+  "servers": {
+    "moodle": {
+      "command": "npx",
+      "args": ["-y", "moodle-mcp"],
+      "env": {
+        "MOODLE_URL": "https://moodle.yourschool.edu",
+        "MOODLE_TOKEN": "your_token_here"
+      }
+    }
+  }
+}
+```
+
+**Option B — Hosted:**
+```json
+{
+  "servers": {
+    "moodle": {
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+Config file: `~/.codeium/windsurf/mcp_config.json`
+
+**Option A — Local:**
+```json
+{
+  "mcpServers": {
+    "moodle": {
+      "command": "npx",
+      "args": ["-y", "moodle-mcp"],
+      "env": {
+        "MOODLE_URL": "https://moodle.yourschool.edu",
+        "MOODLE_TOKEN": "your_token_here"
+      }
+    }
+  }
+}
+```
+
+**Option B — Hosted:**
+```json
+{
+  "mcpServers": {
+    "moodle": {
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Zed</strong></summary>
+
+Config file: `~/.config/zed/settings.json`
+
+**Option A — Local:**
+```json
+{
+  "context_servers": {
+    "moodle": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "moodle-mcp"],
+        "env": {
+          "MOODLE_URL": "https://moodle.yourschool.edu",
+          "MOODLE_TOKEN": "your_token_here"
+        }
+      }
+    }
+  }
+}
+```
+
+**Option B — Hosted:**
+```json
+{
+  "context_servers": {
+    "moodle": {
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Continue.dev</strong></summary>
+
+Config file: `~/.continue/config.json`
+
+**Option A — Local:**
+```json
+{
+  "mcpServers": [
+    {
+      "name": "moodle",
+      "command": "npx",
+      "args": ["-y", "moodle-mcp"],
+      "env": {
+        "MOODLE_URL": "https://moodle.yourschool.edu",
+        "MOODLE_TOKEN": "your_token_here"
+      }
+    }
+  ]
+}
+```
+
+**Option B — Hosted:**
+```json
+{
+  "mcpServers": [
+    {
+      "name": "moodle",
+      "url": "https://moodle-mcp.your-subdomain.workers.dev"
+    }
+  ]
+}
+```
+</details>
+
+<details>
+<summary><strong>Cline</strong></summary>
+
+Open the Cline sidebar in VS Code → MCP Servers → Add Server → paste the JSON:
+
+**Option A — Local:**
+```json
+{
+  "moodle": {
+    "command": "npx",
+    "args": ["-y", "moodle-mcp"],
+    "env": {
+      "MOODLE_URL": "https://moodle.yourschool.edu",
+      "MOODLE_TOKEN": "your_token_here"
+    }
+  }
+}
+```
+
+**Option B — Hosted:**
+```json
+{
+  "moodle": {
+    "url": "https://moodle-mcp.your-subdomain.workers.dev"
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>ChatGPT — Coming soon</strong></summary>
+
+OpenAI has announced MCP support for ChatGPT. Check the [OpenAI blog](https://openai.com/blog) for the release date. Once available, the hosted URL option (Option B) will work directly.
+</details>
 
 ---
 
