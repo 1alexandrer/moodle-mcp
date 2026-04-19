@@ -13,7 +13,7 @@
 > 📦 **[moodle-mcp on npm](https://www.npmjs.com/package/moodle-mcp)** — `npx moodle-mcp`
 
 **13 tools · 5 prompts · MCP Resources**
-
+[![Video Title](https://youtu.be/LPBercPB73Q)
 ---
 
 ## Install
