@@ -8,6 +8,7 @@ function mockOkJson(data: unknown) {
   return Promise.resolve({
     ok: true,
     json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
   });
 }
 
@@ -20,6 +21,8 @@ describe("MoodleClient.create with token", () => {
       username: "student",
       sitename: "My Uni",
       fullname: "Alice Smith",
+      release: "4.3.0",
+      functions: [{ name: "core_webservice_get_site_info", version: "1" }],
     }));
 
     const client = await MoodleClient.create({
@@ -28,6 +31,9 @@ describe("MoodleClient.create with token", () => {
     });
 
     expect(client.userId).toBe(42);
+    expect(client.siteName).toBe("My Uni");
+    expect(client.release).toBe("4.3.0");
+    expect(client.supportedFunctions.has("core_webservice_get_site_info")).toBe(true);
     expect(mockFetch).toHaveBeenCalledOnce();
   });
 });
@@ -39,7 +45,7 @@ describe("MoodleClient.create with username+password", () => {
     mockFetch
       .mockResolvedValueOnce(mockOkJson({ token: "fetched-token" }))
       .mockResolvedValueOnce(mockOkJson({
-        userid: 7, username: "bob", sitename: "Uni", fullname: "Bob",
+        userid: 7, username: "bob", sitename: "Uni", fullname: "Bob", release: "4.3.0",
       }));
 
     const client = await MoodleClient.create({
@@ -67,7 +73,7 @@ describe("MoodleClient.call", () => {
   beforeEach(() => vi.clearAllMocks());
 
   async function makeClient() {
-    mockFetch.mockResolvedValueOnce(mockOkJson({ userid: 1, username: "a", sitename: "b", fullname: "c" }));
+    mockFetch.mockResolvedValueOnce(mockOkJson({ userid: 1, username: "a", sitename: "b", fullname: "c", release: "4.3.0" }));
     return MoodleClient.create({ baseUrl: "https://moodle.uni.edu", token: "t" });
   }
 
@@ -101,7 +107,7 @@ describe("MoodleClient.call", () => {
 
 describe("MoodleClient.fileUrl", () => {
   it("appends token to pluginfile URL", async () => {
-    mockFetch.mockResolvedValueOnce(mockOkJson({ userid: 1, username: "a", sitename: "b", fullname: "c" }));
+    mockFetch.mockResolvedValueOnce(mockOkJson({ userid: 1, username: "a", sitename: "b", fullname: "c", release: "4.3.0" }));
     const client = await MoodleClient.create({ baseUrl: "https://moodle.uni.edu", token: "mytoken" });
     const url = client.fileUrl("https://moodle.uni.edu/pluginfile.php/5/course/section/0/notes.pdf");
     expect(url).toContain("token=mytoken");
