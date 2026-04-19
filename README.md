@@ -459,11 +459,6 @@ Some tools require your Moodle admin to enable specific web services. Run `moodl
 
 If a tool isn't available, it returns a helpful message explaining what your admin needs to enable — it won't crash the server.
 
----
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=1alexandrer/moodle-mcp&type=Date)](https://star-history.com/#1alexandrer/moodle-mcp)
 
 ---
 
