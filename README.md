@@ -8,20 +8,11 @@
 
 ## Quick Start
 
-**1. Install**
+**1. Get your token** → [see below](#getting-your-token)
 
-```bash
-npx moodle-mcp
-```
+> **Tip:** Run `npx moodle-mcp` in your terminal at any time to see setup instructions printed for your platform.
 
-Or install globally:
-```bash
-npm install -g moodle-mcp
-```
-
-**2. Get your token** → [see below](#getting-your-token)
-
-**3. Add to your MCP client**
+**2. Add to your MCP client**
 
 **Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on Mac, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
 ```json
@@ -159,9 +150,33 @@ Claude will:
 
 ### See the graph
 
+**Option A — Obsidian Graph View** (built-in, free)
+
 1. Open the vault in Obsidian
 2. Click **Graph View** (sidebar icon or `Cmd+G`)
 3. Your entire course appears as a knowledge graph — linked concepts cluster together, isolated topics stand out as things to review
+
+**Option B — Graphify** (richer visual graph)
+
+1. Install [Graphify](https://graphify.app) — it reads the same `.md` files Obsidian writes
+2. Point it at your vault folder (`~/obsidian/finals`)
+3. Drag to explore connections; click any node to open the note and ask Claude about it
+
+Both tools read the same Markdown vault — you can use both.
+
+### Query the graph with Claude
+
+Once the vault exists on disk, you can ask Claude Code or Claude Desktop questions like:
+
+```
+Explain the relationship between [[topic A]] and [[topic B]] in my course notes at ~/obsidian/finals
+```
+
+```
+Based on my notes in ~/obsidian/finals, which topics do I need to review most before the exam?
+```
+
+Claude reads your `.md` files directly and reasons across the full linked graph.
 
 ### Natural language search
 

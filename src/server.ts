@@ -15,6 +15,49 @@ import { registerSiteInfoTool } from "./tools/siteinfo.js";
 import { registerResources } from "./resources/index.js";
 import { registerPrompts } from "./prompts/index.js";
 
+if (process.stdin.isTTY && !process.env.MOODLE_URL) {
+  console.log(`
+moodle-mcp v0.1.0 — Moodle MCP Server
+
+This tool runs as a background server for Claude — you don't run it directly.
+Add it to your Claude config and restart Claude.
+
+━━━ Claude Desktop ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Config file:
+  Mac:     ~/Library/Application Support/Claude/claude_desktop_config.json
+  Windows: %APPDATA%\\Claude\\claude_desktop_config.json
+
+Paste this into the JSON:
+  "mcpServers": {
+    "moodle": {
+      "command": "npx",
+      "args": ["-y", "moodle-mcp"],
+      "env": {
+        "MOODLE_URL": "https://moodle.yourschool.edu",
+        "MOODLE_TOKEN": "your_token_here"
+      }
+    }
+  }
+
+━━━ Claude Code (CLI) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Run once in your project folder:
+  claude mcp add moodle npx moodle-mcp \\
+    -e MOODLE_URL=https://moodle.yourschool.edu \\
+    -e MOODLE_TOKEN=your_token_here
+
+━━━ Get your Moodle token ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Log in to your school's Moodle in a browser
+2. Go to: https://moodle.yourschool.edu/user/managetoken.php
+3. Copy the "Moodle mobile web service" token
+
+SSO school (Microsoft/Google login)? Use the Moodle mobile app:
+  App settings → About → tap version 5× → Developer options → Copy token
+
+Full guide: https://github.com/1alexandrer/moodle-mcp#getting-your-token
+`);
+  process.exit(0);
+}
+
 async function main() {
   const config = getConfig();
   const client = await MoodleClient.create(config);
