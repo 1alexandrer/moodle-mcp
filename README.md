@@ -38,8 +38,9 @@ See [Getting Your Token](#getting-your-token) below. You'll need this for any in
 
 After deploying, set `MOODLE_URL` and `MOODLE_TOKEN` as [secrets in the CF dashboard](https://dash.cloudflare.com/) or via:
 ```bash
-wrangler secret put MOODLE_URL
-wrangler secret put MOODLE_TOKEN
+npx wrangler secret put MOODLE_URL
+npx wrangler secret put MOODLE_TOKEN
+npm run deploy
 ```
 Your URL will be `https://moodle-mcp.<your-subdomain>.workers.dev`.
 
@@ -420,7 +421,8 @@ Both tools read the same Markdown vault — you can use both.
 
 ### Knowledge Graph preview
 
-![Obsidian knowledge graph of a university course](<img width="1565" height="947" alt="image" src="https://github.com/user-attachments/assets/382cf5ed-4806-4d3a-bfdc-6e4eeb15c3ec" />)
+![Obsidian knowledge graph of a university course]
+<img width="1565" height="947" alt="image" src="https://github.com/user-attachments/assets/382cf5ed-4806-4d3a-bfdc-6e4eeb15c3ec" />
 *Your entire course as a linked knowledge graph — built in one command. Run `/build-study-notes` once to generate this.*
 
 ### Query the graph with Claude
