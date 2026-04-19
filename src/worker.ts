@@ -22,19 +22,27 @@ export default {
       );
     }
 
-    const config = { baseUrl: normalizeUrl(env.MOODLE_URL), token: env.MOODLE_TOKEN };
-    const client = await MoodleClient.create(config);
+    try {
+      const config = { baseUrl: normalizeUrl(env.MOODLE_URL), token: env.MOODLE_TOKEN };
+      const client = await MoodleClient.create(config);
 
-    const server = new McpServer({ name: "moodle-mcp", version: "0.1.1" });
+      const server = new McpServer({ name: "moodle-mcp", version: "0.1.1" });
 
-    registerAllTools(server, client);
-    registerResources(server, client);
-    registerPrompts(server);
+      registerAllTools(server, client);
+      registerResources(server, client);
+      registerPrompts(server);
 
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-    await server.connect(transport);
-    return transport.handleRequest(request);
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      await server.connect(transport);
+      return transport.handleRequest(request);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return new Response(JSON.stringify({ error: message }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   },
 };
