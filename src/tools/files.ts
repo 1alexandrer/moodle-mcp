@@ -32,7 +32,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export async function listResources(client: MoodleClient, courseId: number): Promise<string> {
+async function listResources(client: MoodleClient, courseId: number): Promise<string> {
   const sections = await client.call<CourseSection[]>("core_course_get_contents", {
     courseid: courseId,
   });
@@ -49,7 +49,13 @@ export async function listResources(client: MoodleClient, courseId: number): Pro
 
     for (const mod of fileMods) {
       if (mod.modname === "url") {
-        lines.push(`- 🔗 [${mod.name}](${mod.url ?? ""})`);
+        // External link (not a Moodle-hosted file). Safe to show as-is — it's
+        // whatever the professor linked, and moodle_download_file cannot fetch it.
+        if (mod.url) {
+          lines.push(`- 🔗 [${mod.name}](${mod.url}) *(external)*`);
+        } else {
+          lines.push(`- 🔗 **${mod.name}** *(external)*`);
+        }
         continue;
       }
       if (!mod.contents || mod.contents.length === 0) {
@@ -57,29 +63,37 @@ export async function listResources(client: MoodleClient, courseId: number): Pro
         continue;
       }
       for (const file of mod.contents) {
-        if (file.type === "url") {
-          lines.push(`- 🔗 [${file.filename}](${file.fileurl})`);
-        } else {
-          const url = client.fileUrl(file.fileurl);
-          const size = formatSize(file.filesize);
-          lines.push(`- 📄 [${file.filename}](${url}) *(${size})*`);
-        }
+        if (file.type !== "file") continue;
+        const mime = file.mimetype ?? "application/octet-stream";
+        const fileId = await client.fileIdStore.seal({
+          userId: client.userId,
+          courseId,
+          fileurl: file.fileurl,
+          mime,
+          filename: file.filename,
+          filesize: file.filesize,
+        });
+        const size = formatSize(file.filesize);
+        lines.push(`- 📄 **${file.filename}** *(${size})* — fileId: \`${fileId}\``);
       }
     }
     lines.push("");
   }
 
   if (!hasFiles) return "No downloadable files found in this course.";
+  lines.push(
+    "_Call `moodle_download_file` with a fileId above to read the file's contents._",
+  );
   return lines.join("\n");
 }
 
 export function registerFileTools(server: McpServer, client: MoodleClient): void {
   server.tool(
     "moodle_list_resources",
-    "List all downloadable files and links in a course, grouped by the course's own sections (weeks, chapters, topics — as defined by the professor). Returns authenticated download URLs.",
+    "List all downloadable files and links in a course, grouped by the course's own sections (weeks, chapters, topics — as defined by the professor). Each file gets an opaque fileId you pass to moodle_download_file to read contents. External URL-module links are shown as-is.",
     { courseId: z.number().describe("Course ID from moodle_list_courses") },
     async ({ courseId }) => ({
       content: [{ type: "text" as const, text: await listResources(client, courseId) }],
-    })
+    }),
   );
 }

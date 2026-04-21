@@ -105,11 +105,41 @@ describe("MoodleClient.call", () => {
   });
 });
 
-describe("MoodleClient.fileUrl", () => {
-  it("appends token to pluginfile URL", async () => {
+describe("MoodleClient.downloadFile", () => {
+  async function makeAuthedClient() {
     mockFetch.mockResolvedValueOnce(mockOkJson({ userid: 1, username: "a", sitename: "b", fullname: "c", release: "4.3.0" }));
-    const client = await MoodleClient.create({ baseUrl: "https://moodle.uni.edu", token: "mytoken" });
-    const url = client.fileUrl("https://moodle.uni.edu/pluginfile.php/5/course/section/0/notes.pdf");
-    expect(url).toContain("token=mytoken");
+    return MoodleClient.create({ baseUrl: "https://moodle.uni.edu", token: "mytoken" });
+  }
+
+  it("refuses URLs on a different host", async () => {
+    const client = await makeAuthedClient();
+    await expect(client.downloadFile("https://evil.example/pluginfile.php/x.pdf")).rejects.toThrow(
+      /not on this Moodle host/,
+    );
+  });
+
+  it("refuses non-pluginfile paths on the Moodle host", async () => {
+    const client = await makeAuthedClient();
+    await expect(client.downloadFile("https://moodle.uni.edu/other/path.pdf")).rejects.toThrow(
+      /pluginfile\.php/,
+    );
+  });
+
+  it("fetches pluginfile URL with token attached to the request, returning bytes", async () => {
+    const client = await makeAuthedClient();
+    const payload = new Uint8Array([1, 2, 3, 4]);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ "content-type": "application/pdf" }),
+      arrayBuffer: async () => payload.buffer,
+    } as Response);
+
+    const result = await client.downloadFile("https://moodle.uni.edu/pluginfile.php/5/course/section/0/notes.pdf");
+    expect(result.mime).toBe("application/pdf");
+    expect(Array.from(result.bytes)).toEqual([1, 2, 3, 4]);
+
+    const calledUrl = String(mockFetch.mock.calls.at(-1)?.[0]);
+    expect(calledUrl).toContain("token=mytoken");
+    expect(calledUrl).toContain("/pluginfile.php/");
   });
 });

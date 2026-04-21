@@ -1,4 +1,5 @@
 import type { Config } from "./config.js";
+import { FileIdStore } from "./file-id-store.js";
 
 export interface SiteInfo {
   userid: number;
@@ -15,20 +16,33 @@ type MoodleErrorResponse = {
   message?: string;
 };
 
+export interface DownloadedFile {
+  mime: string;
+  bytes: Uint8Array;
+}
+
 export class MoodleClient {
   userId: number = 0;
   siteName: string = "";
   release: string = "";
   supportedFunctions: Set<string> = new Set();
+  readonly fileIdStore: FileIdStore;
+
+  private readonly baseHost: string;
+  readonly maxFileBytes: number;
 
   private constructor(
     private readonly baseUrl: string,
     private readonly token: string,
-  ) {}
+    maxFileBytes: number,
+  ) {
+    this.baseHost = new URL(baseUrl).host;
+    this.fileIdStore = new FileIdStore(token);
+    this.maxFileBytes = maxFileBytes;
+  }
 
   /** Returns true if the WS function is available on this Moodle server. */
   supports(wsfunction: string): boolean {
-    // If the server didn't return a functions list, assume everything is supported.
     if (this.supportedFunctions.size === 0) return true;
     return this.supportedFunctions.has(wsfunction);
   }
@@ -37,7 +51,7 @@ export class MoodleClient {
     const token =
       config.token ??
       (await MoodleClient.login(config.baseUrl, config.username!, config.password!));
-    const client = new MoodleClient(config.baseUrl, token);
+    const client = new MoodleClient(config.baseUrl, token, config.maxFileBytes);
     const info = await client.call<SiteInfo>("core_webservice_get_site_info");
     client.userId = info.userid;
     client.siteName = info.sitename;
@@ -99,9 +113,51 @@ export class MoodleClient {
     return data;
   }
 
-  fileUrl(pluginfileUrl: string): string {
-    const url = new URL(pluginfileUrl);
-    url.searchParams.set("token", this.token);
-    return url.toString();
+  /**
+   * Fetch a Moodle-managed file through the server. Only accepts pluginfile.php
+   * URLs on this Moodle host — external `url` module targets are refused so we
+   * don't become an SSRF relay. Caps the response at MAX_DOWNLOAD_BYTES.
+   *
+   * The Moodle WS token is attached to the outbound request only; it never
+   * reappears in anything returned to the MCP client.
+   */
+  async downloadFile(fileurl: string): Promise<DownloadedFile> {
+    let parsed: URL;
+    try {
+      parsed = new URL(fileurl);
+    } catch {
+      throw new Error("Invalid file URL");
+    }
+    if (parsed.host !== this.baseHost) {
+      throw new Error("Refused: file URL is not on this Moodle host");
+    }
+    if (
+      !parsed.pathname.includes("/pluginfile.php") &&
+      !parsed.pathname.includes("/webservice/pluginfile.php")
+    ) {
+      throw new Error("Refused: only Moodle-managed pluginfile.php URLs can be fetched");
+    }
+    parsed.searchParams.set("token", this.token);
+
+    const res = await fetch(parsed.toString());
+    if (!res.ok) throw new Error(`Failed to fetch file: HTTP ${res.status}`);
+
+    const maxMb = Math.round(this.maxFileBytes / 1024 / 1024);
+    const lengthHeader = res.headers.get("content-length");
+    if (lengthHeader && Number(lengthHeader) > this.maxFileBytes) {
+      throw new Error(
+        `File too large (${Math.round(Number(lengthHeader) / 1024 / 1024)} MB); max is ${maxMb} MB. Admins can raise the cap with MOODLE_MCP_MAX_FILE_MB.`,
+      );
+    }
+
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > this.maxFileBytes) {
+      throw new Error(
+        `File too large (${Math.round(buf.byteLength / 1024 / 1024)} MB); max is ${maxMb} MB. Admins can raise the cap with MOODLE_MCP_MAX_FILE_MB.`,
+      );
+    }
+
+    const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
+    return { mime, bytes: new Uint8Array(buf) };
   }
 }

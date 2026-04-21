@@ -16,7 +16,7 @@
 
 > 📦 **[moodle-mcp on npm](https://www.npmjs.com/package/moodle-mcp)** — `npx moodle-mcp`
 
-**13 tools · 5 prompts · MCP Resources**
+**14 tools · 5 prompts · MCP Resources**
 
 
 
@@ -345,7 +345,8 @@ If your school uses a regular username/password (not Microsoft/Google/SSO), you 
 | `moodle_get_site_info` | School name, Moodle version, which APIs are enabled | — |
 | `moodle_list_courses` | All your enrolled courses | — |
 | `moodle_get_course` | Sections and all activities in a course | `courseId` |
-| `moodle_list_resources` | Files and links, grouped by course section | `courseId` |
+| `moodle_list_resources` | Files and links grouped by section — returns opaque `fileId`s | `courseId` |
+| `moodle_download_file` | Read a file by its `fileId` — returns text for text/JSON/XML, base64 for PDFs/DOCX/images | `fileId` |
 | `moodle_list_assignments` | Assignments with due dates, grouped by section | `courseId` |
 | `moodle_get_assignment` | Submission status and grade feedback | `assignmentId` |
 | `moodle_get_grades` | Full grade report with categories and feedback | `courseId` |
@@ -459,7 +460,7 @@ Some tools require your Moodle admin to enable specific web services. Run `moodl
 
 | Tool | Required | Notes |
 |------|----------|-------|
-| `moodle_list_courses`, `moodle_get_course`, `moodle_list_resources` | Always available | Core Moodle WS |
+| `moodle_list_courses`, `moodle_get_course`, `moodle_list_resources`, `moodle_download_file` | Always available | Core Moodle WS |
 | `moodle_list_assignments`, `moodle_get_assignment` | Admin must enable | `mod_assign` service |
 | `moodle_get_grades` | Admin must enable | `gradereport_user` service |
 | `moodle_get_calendar_events` | Usually available | `core_calendar` service |
@@ -468,6 +469,24 @@ Some tools require your Moodle admin to enable specific web services. Run `moodl
 | `moodle_get_notifications` | Admin may need to enable | `message_popup` service |
 
 If a tool isn't available, it returns a helpful message explaining what your admin needs to enable — it won't crash the server.
+
+
+---
+
+## Security & file access (v0.2)
+
+Tool responses never contain raw or authenticated Moodle file URLs. Instead, `moodle_list_resources` returns opaque `fileId`s — AES-GCM-sealed envelopes bound to your Moodle account via the access token. Pass a `fileId` to `moodle_download_file`, and the server:
+
+1. Decrypts the `fileId` and checks it was issued to you (not another user).
+2. Re-checks with Moodle that the file is still visible to you (catches unenrolment, hidden modules, removed files).
+3. Refuses anything that isn't a `pluginfile.php` URL on your Moodle host (no SSRF relay).
+4. Fetches the file server-side with the token attached to the outbound request only — the token never appears in anything returned to the MCP client.
+5. Returns text for text/JSON/XML MIMEs, or the bytes as an MCP embedded resource (base64) for PDFs/DOCX/images.
+
+This fixes the "domain not in the list of allowed fetch" error seen with Claude.ai's beta connectors when a chat tried to open a Moodle-hosted PDF: Claude no longer has to fetch anything cross-origin, because the content arrives inside the MCP response.
+
+**Limits:** 25 MB per file by default (override with `MOODLE_MCP_MAX_FILE_MB=<positive number>`). File IDs expire after 24 hours. Rotating your Moodle token invalidates all outstanding IDs.
+
 
 
 ---

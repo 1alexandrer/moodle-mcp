@@ -3,6 +3,21 @@ export interface Config {
   token?: string;
   username?: string;
   password?: string;
+  /** Per-file download cap in bytes. Default 25 MB. */
+  maxFileBytes: number;
+}
+
+export const DEFAULT_MAX_FILE_MB = 25;
+
+export function parseMaxFileMb(raw: string | undefined): number {
+  if (raw === undefined || raw === "") return DEFAULT_MAX_FILE_MB;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(
+      `MOODLE_MCP_MAX_FILE_MB must be a positive number; got "${raw}"`,
+    );
+  }
+  return n;
 }
 
 export function normalizeUrl(raw: string): string {
@@ -29,5 +44,7 @@ export function getConfig(): Config {
     );
   }
 
-  return { baseUrl, token, username, password };
+  const maxFileBytes = Math.floor(parseMaxFileMb(process.env.MOODLE_MCP_MAX_FILE_MB) * 1024 * 1024);
+
+  return { baseUrl, token, username, password, maxFileBytes };
 }

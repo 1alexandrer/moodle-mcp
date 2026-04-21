@@ -29,22 +29,31 @@ interface Course {
   shortname: string;
 }
 
-function encodeFileUrl(url: string): string {
-  return Buffer.from(url).toString("hex");
-}
-
-function decodeFileUrl(hex: string): string {
-  return Buffer.from(hex, "hex").toString();
-}
+const TEXT_MIMES = new Set([
+  "application/json",
+  "application/xml",
+  "application/javascript",
+  "application/x-yaml",
+  "application/yaml",
+]);
 
 function isTextMime(mime: string): boolean {
-  return mime.startsWith("text/") || mime === "application/json" || mime === "application/xml";
+  return mime.startsWith("text/") || TEXT_MIMES.has(mime);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let s = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as unknown as number[]);
+  }
+  return btoa(s);
 }
 
 export function registerResources(server: McpServer, client: MoodleClient): void {
   server.resource(
     "moodle-course-files",
-    new ResourceTemplate("moodle://courses/{courseId}/files/{encodedUrl}", {
+    new ResourceTemplate("moodle://files/{fileId}", {
       list: async () => {
         const courses = await client.call<Course[]>("core_enrol_get_users_courses", {
           userid: client.userId,
@@ -63,45 +72,48 @@ export function registerResources(server: McpServer, client: MoodleClient): void
                   if (!["resource", "folder"].includes(mod.modname)) continue;
                   for (const file of mod.contents ?? []) {
                     if (file.type !== "file") continue;
-                    const encodedUrl = encodeFileUrl(file.fileurl);
+                    const mime = file.mimetype ?? "application/octet-stream";
+                    const fileId = await client.fileIdStore.seal({
+                      userId: client.userId,
+                      courseId: course.id,
+                      fileurl: file.fileurl,
+                      mime,
+                      filename: file.filename,
+                      filesize: file.filesize,
+                    });
                     resources.push({
-                      uri: `moodle://courses/${course.id}/files/${encodedUrl}`,
+                      uri: `moodle://files/${fileId}`,
                       name: `${course.shortname} / ${section.name || "General"} / ${file.filename}`,
-                      mimeType: file.mimetype,
+                      mimeType: mime,
                       description: `${course.fullname} — ${section.name || "General"}`,
                     });
                   }
                 }
               }
             } catch {
-              // Skip courses that fail (permission issues etc.)
+              // Skip courses that fail (permission / API issues).
             }
-          })
+          }),
         );
 
         return { resources };
       },
     }),
-    async (uri, { courseId: _courseId, encodedUrl }) => {
-      const fileUrl = decodeFileUrl(encodedUrl as string);
-      const authenticatedUrl = client.fileUrl(fileUrl);
-
-      const response = await fetch(authenticatedUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: HTTP ${response.status}`);
+    async (uri, { fileId }) => {
+      const ref = await client.fileIdStore.open(fileId as string, client.userId);
+      if (!ref) {
+        throw new Error("fileId is invalid, expired, or not issued to the current user");
       }
+      const downloaded = await client.downloadFile(ref.fileurl);
+      const mime = downloaded.mime || ref.mime || "application/octet-stream";
 
-      const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream";
-
-      if (isTextMime(mimeType)) {
-        const text = await response.text();
-        return { contents: [{ uri: uri.href, mimeType, text }] };
+      if (isTextMime(mime)) {
+        const text = new TextDecoder("utf-8", { fatal: false }).decode(downloaded.bytes);
+        return { contents: [{ uri: uri.href, mimeType: mime, text }] };
       }
-
-      // PDF and other binary formats — return as base64 blob
-      const buffer = await response.arrayBuffer();
-      const blob = Buffer.from(buffer).toString("base64");
-      return { contents: [{ uri: uri.href, mimeType, blob }] };
-    }
+      return {
+        contents: [{ uri: uri.href, mimeType: mime, blob: bytesToBase64(downloaded.bytes) }],
+      };
+    },
   );
 }
