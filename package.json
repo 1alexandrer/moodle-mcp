@@ -28,7 +28,7 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0",
     "vitest": "^2.0.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.84.1"
   },
   "engines": {
     "node": ">=18.0.0"
