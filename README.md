@@ -12,7 +12,7 @@
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com)
 [![MIT License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
-> Give Claude full access to your Moodle — courses, files, assignments, grades, quizzes, calendar, and more. Build Obsidian study vaults from your lecture notes in one command.
+> Give your MCP client access to Moodle — courses, files, assignments, grades, quizzes, calendar, and more. Browser login supports SSO and Moodle Workplace sites without manually copying a token.
 
 > 📦 **[moodle-mcp on npm](https://www.npmjs.com/package/moodle-mcp)** — `npx moodle-mcp`
 
@@ -24,19 +24,29 @@
 
 ## Install
 
-### Step 1 — Get your Moodle token
+### Step 1 — Sign in through your browser
 
-See [Getting Your Token](#getting-your-token) below. You'll need this for any install method.
+Run this once before adding the local MCP server:
+
+```bash
+npx moodle-mcp login https://moodle.yourschool.edu
+```
+
+An isolated Chrome/Edge/Chromium window opens. Complete the normal Moodle or institutional SSO login. The Moodle mobile token is captured internally, validated, and stored in your operating system's credential store. It is never printed or written to the MCP configuration.
+
+For another Moodle site, replace the URL. Running `npx moodle-mcp` with no arguments also starts the first-use wizard.
+
+> **Verified with Moodle Workplace:** This flow has been tested against UNIVESP (`https://ava.univesp.br`) using Microsoft SSO with Authenticator 2FA.
 
 ### Step 2 — Pick your delivery mode
 
-**Option A — Local (zero hosting):** Runs `npx moodle-mcp` on your machine each time your MCP client starts. No server, no cost, nothing to deploy.
+**Option A — Local (recommended for browser/SSO login):** Runs `npx moodle-mcp` on your machine each time your MCP client starts. No hosting and no token in the client configuration.
 
 **Option B — Hosted (Cloudflare Worker):** Deploy once, get a permanent URL. Your MCP client connects to the URL — no `npx` on the client side.
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/ )
 
-After deploying, set `MOODLE_URL` and `MOODLE_TOKEN` as [secrets in the CF dashboard](https://dash.cloudflare.com/) or via:
+The hosted Worker remains a single-account, token-based deployment. After deploying, set `MOODLE_URL` and `MOODLE_TOKEN` as [secrets in the CF dashboard](https://dash.cloudflare.com/) or via:
 ```bash
 npx wrangler secret put MOODLE_URL
 npx wrangler secret put MOODLE_TOKEN
@@ -59,11 +69,7 @@ Config file:
   "mcpServers": {
     "moodle": {
       "command": "npx",
-      "args": ["-y", "moodle-mcp"],
-      "env": {
-        "MOODLE_URL": "https://moodle.yourschool.edu",
-        "MOODLE_TOKEN": "your_token_here"
-      }
+      "args": ["-y", "moodle-mcp"]
     }
   }
 }
@@ -86,9 +92,7 @@ Config file:
 
 **Option A — Local:**
 ```bash
-claude mcp add moodle npx -- -y moodle-mcp \
-  -e MOODLE_URL=https://moodle.yourschool.edu \
-  -e MOODLE_TOKEN=your_token_here
+claude mcp add --transport stdio moodle -- npx -y moodle-mcp
 ```
 
 **Option B — Hosted:**
@@ -108,11 +112,7 @@ Config file: `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project)
   "mcpServers": {
     "moodle": {
       "command": "npx",
-      "args": ["-y", "moodle-mcp"],
-      "env": {
-        "MOODLE_URL": "https://moodle.yourschool.edu",
-        "MOODLE_TOKEN": "your_token_here"
-      }
+      "args": ["-y", "moodle-mcp"]
     }
   }
 }
@@ -141,11 +141,7 @@ Config file: `.vscode/mcp.json` in your project, or `settings.json` globally.
   "servers": {
     "moodle": {
       "command": "npx",
-      "args": ["-y", "moodle-mcp"],
-      "env": {
-        "MOODLE_URL": "https://moodle.yourschool.edu",
-        "MOODLE_TOKEN": "your_token_here"
-      }
+      "args": ["-y", "moodle-mcp"]
     }
   }
 }
@@ -174,11 +170,7 @@ Config file: `~/.codeium/windsurf/mcp_config.json`
   "mcpServers": {
     "moodle": {
       "command": "npx",
-      "args": ["-y", "moodle-mcp"],
-      "env": {
-        "MOODLE_URL": "https://moodle.yourschool.edu",
-        "MOODLE_TOKEN": "your_token_here"
-      }
+      "args": ["-y", "moodle-mcp"]
     }
   }
 }
@@ -208,11 +200,7 @@ Config file: `~/.config/zed/settings.json`
     "moodle": {
       "command": {
         "path": "npx",
-        "args": ["-y", "moodle-mcp"],
-        "env": {
-          "MOODLE_URL": "https://moodle.yourschool.edu",
-          "MOODLE_TOKEN": "your_token_here"
-        }
+        "args": ["-y", "moodle-mcp"]
       }
     }
   }
@@ -243,11 +231,7 @@ Config file: `~/.continue/config.json`
     {
       "name": "moodle",
       "command": "npx",
-      "args": ["-y", "moodle-mcp"],
-      "env": {
-        "MOODLE_URL": "https://moodle.yourschool.edu",
-        "MOODLE_TOKEN": "your_token_here"
-      }
+      "args": ["-y", "moodle-mcp"]
     }
   ]
 }
@@ -276,11 +260,7 @@ Open the Cline sidebar in VS Code → MCP Servers → Add Server → paste the J
 {
   "moodle": {
     "command": "npx",
-    "args": ["-y", "moodle-mcp"],
-    "env": {
-      "MOODLE_URL": "https://moodle.yourschool.edu",
-      "MOODLE_TOKEN": "your_token_here"
-    }
+    "args": ["-y", "moodle-mcp"]
   }
 }
 ```
@@ -295,26 +275,36 @@ Open the Cline sidebar in VS Code → MCP Servers → Add Server → paste the J
 ```
 </details>
 
-<details>
-<summary><strong>ChatGPT — Coming soon</strong></summary>
-
-OpenAI has announced MCP support for ChatGPT. Check the [OpenAI blog](https://openai.com/blog) for the release date. Once available, the hosted URL option (Option B) will work directly.
-</details>
-
 ---
 
-## Getting Your Token
+## Authentication
 
-### Option A — Moodle profile page (works everywhere)
+### Browser login (recommended)
+
+```bash
+npx moodle-mcp login https://moodle.yourschool.edu
+```
+
+The browser flow uses Moodle's official `admin/tool/mobile/launch.php` endpoint. It works with regular Moodle login and browser-based identity providers such as SAML, LDAP-backed SSO, Microsoft, and Google when the site's Moodle mobile service is enabled.
+
+The local settings file (`~/.moodle-mcp.json`) contains only the Moodle URL and authentication mode. The token is stored under the `moodle-mcp` service in macOS Keychain, Windows Credential Manager, or Linux Secret Service.
+
+To replace an expired token, run `login` again. To remove the local credential without revoking the server-side Moodle token:
+
+```bash
+npx moodle-mcp logout https://moodle.yourschool.edu
+```
+
+### Manual token (advanced/CI/hosted Worker)
+
+If browser login is unavailable, existing environment-based authentication is still supported:
 
 1. Log in to your school's Moodle in a browser
 2. Go to **Profile → Security keys** (URL: `https://moodle.yourschool.edu/user/managetoken.php`)
 3. Find the **Moodle mobile web service** token and copy it
-4. Set `MOODLE_TOKEN=<token>` in your MCP config
+4. Set `MOODLE_URL` and `MOODLE_TOKEN` in the MCP process environment
 
-### Option B — Get the token from 
-`https://moodle.yourschool.edu/login/token.php?username=<YOURUSERNAME>&password=<YOURPASSWORD>&service=moodle_mobile_app`
-### Option C — Username + password (not SSO schools)
+### Username + password (non-SSO sites only)
 
 If your school uses a regular username/password (not Microsoft/Google/SSO), you can skip the token step entirely:
 
@@ -326,15 +316,7 @@ If your school uses a regular username/password (not Microsoft/Google/SSO), you 
 }
 ```
 
-> ⚠️ **SSO schools**: If your school login page redirects to Microsoft, Google, or another identity provider, Option B won't work. Use Option A or C.
-
-### Option D — Extract from Moodle mobile app (SSO schools)
-
-1. Install the **Moodle app** on your phone and log in with SSO
-2. Go to **App settings → About**
-3. Tap the version number 5 times to enable developer mode
-4. Go to **Developer options → Copy token** and copy it
-5. Use that token as `MOODLE_TOKEN` in Option A
+> **SSO sites:** Direct username/password authentication cannot follow SAML, Microsoft, Google, or other browser redirects. Use browser login instead.
 
 ---
 
@@ -474,6 +456,10 @@ If a tool isn't available, it returns a helpful message explaining what your adm
 ---
 
 ## Security & file access (v0.2)
+
+Browser authentication uses a random, single-use passport. The callback payload is accepted only when its Moodle-generated signature matches the current Moodle URL and login attempt. The captured token is then verified against `core_webservice_get_site_info` before it is written to the operating system credential store. Failed, cancelled, or timed-out logins do not persist a token.
+
+The browser runs with a temporary isolated profile that is deleted after login. Existing personal Chrome sessions and profiles are not reused.
 
 Tool responses never contain raw or authenticated Moodle file URLs. Instead, `moodle_list_resources` returns opaque `fileId`s — AES-GCM-sealed envelopes bound to your Moodle account via the access token. Pass a `fileId` to `moodle_download_file`, and the server:
 
