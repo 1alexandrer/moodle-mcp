@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "moodle-mcp",
   "display_name": "Moodle MCP",
-  "version": "0.1.2",
-  "description": "Give Claude access to your Moodle courses, assignments, grades, quizzes, calendar, forums, and notifications.",
-  "long_description": "Moodle MCP connects Claude to any Moodle LMS instance. Ask about upcoming deadlines, check your grades, browse course resources, read assignment feedback, and more — all in natural language.\n\nSupports token-based auth (recommended) or username/password login.",
+  "version": "0.2.0",
+  "description": "Connect MCP clients to Moodle through secure browser login.",
+  "long_description": "Moodle MCP connects MCP clients to Moodle LMS and Moodle Workplace. Ask about upcoming deadlines, check grades, browse course resources, and read assignment feedback.\n\nLocal installations authenticate through the browser and store the resulting Moodle token in the operating system credential store. Token and username/password environment variables remain available for advanced use.",
   "author": {
     "name": "1alexandrer",
     "url": "https://github.com/1alexandrer"
@@ -24,10 +24,7 @@
       "command": "node",
       "args": ["${__dirname}/dist/server.js"],
       "env": {
-        "MOODLE_URL": "${user_config.moodle_url}",
-        "MOODLE_TOKEN": "${user_config.moodle_token}",
-        "MOODLE_USERNAME": "${user_config.moodle_username}",
-        "MOODLE_PASSWORD": "${user_config.moodle_password}"
+        "MOODLE_URL": "${user_config.moodle_url}"
       }
     }
   },
@@ -36,26 +33,6 @@
       "type": "string",
       "title": "Moodle URL",
       "description": "Your Moodle site URL (e.g. https://moodle.myschool.edu)",
-      "required": true
-    },
-    "moodle_token": {
-      "type": "string",
-      "title": "Moodle API Token",
-      "description": "Web service token from Moodle → Preferences → Security keys. Leave blank to use username/password instead.",
-      "sensitive": true,
-      "required": false
-    },
-    "moodle_username": {
-      "type": "string",
-      "title": "Moodle Username",
-      "description": "Your Moodle login username. Only needed if not using an API token.",
-      "required": false
-    },
-    "moodle_password": {
-      "type": "string",
-      "title": "Moodle Password",
-      "description": "Your Moodle login password. Only needed if not using an API token.",
-      "sensitive": true,
       "required": false
     }
   },
@@ -75,7 +52,7 @@
     { "name": "moodle_get_notifications", "description": "Get your recent Moodle notifications" }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32"],
+    "platforms": ["darwin", "win32", "linux"],
     "runtimes": {
       "node": ">=18.0.0"
     }

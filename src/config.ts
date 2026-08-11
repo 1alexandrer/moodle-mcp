@@ -48,3 +48,10 @@ export function getConfig(): Config {
 
   return { baseUrl, token, username, password, maxFileBytes };
 }
+
+/** Resolve only the non-secret file-size setting shared by local and Worker modes. */
+export function getMaxFileBytes(): number {
+  return Math.floor(
+    parseMaxFileMb(process.env.MOODLE_MCP_MAX_FILE_MB) * 1024 * 1024,
+  );
+}

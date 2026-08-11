@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Browser-assisted Moodle Mobile authentication for SSO and Moodle Workplace sites
+- `moodle-mcp login [url]` first-use flow with token validation
+- System credential-store persistence via Keychain, Credential Manager, or Secret Service
+- `moodle-mcp logout [url]` for removing local credentials
+- Tokenless local MCP client configuration
+
+### Changed
+
+- Local configuration now resolves explicit environment credentials before keychain credentials
+- Invalid stored tokens point users back to the browser login command
+- Updated the MCP SDK and patched production transitive dependencies
+
+### Security
+
+- Browser tokens are bound to a random single-use passport and never printed or written to the settings file
+- Browser sessions use an isolated temporary profile that is deleted after authentication
+
 ## [0.1.0] — 2026-04-15
 
 ### Added

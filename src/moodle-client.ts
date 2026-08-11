@@ -106,7 +106,7 @@ export class MoodleClient {
         );
       }
       if (data.errorcode === "invalidtoken") {
-        throw new Error("Invalid Moodle token. Check your MOODLE_TOKEN value.");
+        throw new Error("Invalid Moodle token.");
       }
       throw new Error(`Moodle API error (${data.errorcode ?? "unknown"}): ${data.message ?? "No message"}`);
     }
